@@ -1,0 +1,28 @@
+{
+    "python.defaultInterpreterPath": "C:\\Users\\RFERRAZ\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "python.terminal.activateEnvironment": true,
+    "git.enableSmartCommit": true,
+    "git.autofetch": true,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/.mypy_cache": true,
+        "**/.DS_Store": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/node_modules/**": true,
+        "**/__pycache__/**": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/__pycache__": true
+    },
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit"
+    },
+    "markdownlint.config": {
+        "MD024": true
+    }
+}

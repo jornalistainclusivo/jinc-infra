@@ -1,0 +1,29 @@
+# 1. Bloqueio Total (Default Deny)
+/*
+
+# 2. Exceções de Orquestração (O que queremos versionar)
+!/.gitignore
+!/docker-compose.yml
+!/README.md
+!/.env.example
+!/AGENTS.md
+!/scripts/
+!/.vscode/
+
+# 3. Exceções de Repositórios Aninhados
+# Liberamos apenas a entrada das pastas, o Git interno de cada uma cuida do resto
+!/cms/
+!/jinc-frontend/
+
+# 4. Trava de Segurança Global (Proteção contra vazamentos)
+**/.env
+**/.env.local
+**/node_modules/
+**/dist/
+**/build/
+**/logs/
+**/*.log
+
+# 5. Dados Persistentes do Docker (Não versionar bancos locais)
+**/cms/.tmp/
+**/cms/public/uploads/

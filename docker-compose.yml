@@ -1,0 +1,57 @@
+services:
+  cms:
+    build:
+      context: ./cms
+      dockerfile: Dockerfile
+    container_name: jinc_cms
+    restart: unless-stopped
+    env_file: ./cms/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_CLIENT: sqlite
+      # CAMINHO FIXO: Impede o erro de permissão no /opt/.tmp
+      DATABASE_FILENAME: /opt/app/.tmp/data.db
+      PORT: 1337
+      STRAPI_TELEMETRY_DISABLED: "true"
+    ports:
+      - "1337:1337"
+    volumes:
+      - strapi_uploads:/opt/app/public/uploads
+      - strapi_data:/opt/app/.tmp
+    networks:
+      - jinc_network
+    healthcheck:
+      # Trocamos localhost por 127.0.0.1 para evitar conflitos de IP
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:1337/_health || exit 1" ]
+      interval: 15s # Aumentamos um pouco o tempo
+      timeout: 5s
+      retries: 10 # Damos mais chances para ele acordar
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./jinc-frontend
+      dockerfile: Dockerfile
+    container_name: jinc_frontend
+    restart: unless-stopped
+    env_file: ./jinc-frontend/.env.local
+    environment:
+      NODE_ENV: production
+      INTERNAL_STRAPI_URL: http://cms:1337
+      NEXT_PUBLIC_STRAPI_API_URL: http://localhost:1337
+    ports:
+      - "3000:3000"
+    depends_on:
+      cms:
+        condition: service_healthy
+    networks:
+      - jinc_network
+
+volumes:
+  strapi_uploads:
+  strapi_data:
+
+
+networks:
+  jinc_network:
+    driver: bridge
