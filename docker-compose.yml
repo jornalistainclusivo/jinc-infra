@@ -7,26 +7,30 @@ services:
     restart: unless-stopped
     env_file: ./cms/.env
     environment:
+      # Forçamos development para liberar o Content-Type Builder
       NODE_ENV: development
       DATABASE_CLIENT: sqlite
-      # CAMINHO FIXO: Impede o erro de permissão no /opt/.tmp
       DATABASE_FILENAME: /opt/app/.tmp/data.db
       PORT: 1337
       STRAPI_TELEMETRY_DISABLED: "true"
     ports:
       - "1337:1337"
     volumes:
+      # BIND MOUNT: Sincroniza o código (src, api, etc) com seu VS Code no Windows
+      - ./cms:/opt/app
+      # ANONYMOUS VOLUME: Protege os pacotes do Linux para não misturar com o Windows
+      - /opt/app/node_modules
+      # PERSISTÊNCIA: Mantém suas imagens e banco de dados salvos
       - strapi_uploads:/opt/app/public/uploads
       - strapi_data:/opt/app/.tmp
     networks:
       - jinc_network
     healthcheck:
-      # Trocamos localhost por 127.0.0.1 para evitar conflitos de IP
       test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:1337/_health || exit 1" ]
-      interval: 15s # Aumentamos um pouco o tempo
-      timeout: 5s
-      retries: 10 # Damos mais chances para ele acordar
-      start_period: 40s
+      interval: 15s
+      timeout: 10s
+      retries: 15 # Aumentado para dar tempo de compilar no Windows/WSL2
+      start_period: 60s
 
   frontend:
     build:
@@ -36,6 +40,7 @@ services:
     restart: unless-stopped
     env_file: ./jinc-frontend/.env.local
     environment:
+      # O Frontend consome o CMS via rede interna do Docker
       NODE_ENV: production
       INTERNAL_STRAPI_URL: http://cms:1337
       NEXT_PUBLIC_STRAPI_API_URL: http://localhost:1337
