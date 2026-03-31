@@ -1,6 +1,6 @@
 # 🚀 JINC Rebuild - Infraestrutura & Orquestração
 
-Este é o repositório central de orquestração do ecossistema **Jornalista Inclusivo**. Aqui gerenciamos a infraestrutura, os scripts de migração e a harmonia entre o CMS e o Frontend.
+Este é o repositório central de orquestração do ecossistema **JINC - Jornalista Inclusivo**. Aqui gerenciamos a infraestrutura, os scripts de migração e a harmonia entre o CMS e o Frontend.
 
 ## 🏗️ Arquitetura
 
