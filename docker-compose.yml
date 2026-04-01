@@ -15,6 +15,7 @@ services:
       STRAPI_TELEMETRY_DISABLED: "true"
     ports:
       - "1337:1337"
+      - "5173:5173"
     volumes:
       # BIND MOUNT: Sincroniza o código (src, api, etc) com seu VS Code no Windows
       - ./cms:/opt/app
