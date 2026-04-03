@@ -1,56 +1,68 @@
 import requests
 import re
 from bs4 import BeautifulSoup
+import unicodedata
 
 # --- CONFIGURAÇÕES ---
 STRAPI_URL = "http://localhost:1337"
-STRAPI_TOKEN = "53ad474f1479e63c4b45cc31a60128f634fe3a69c0a7b58da597552e33d4cf54c7403541c9f13586aae6e3c7d1ddb417dc3e2ba9945eb97503bb758821430951e7112725b40c5370f98eb0818c928ab1c1bcf4a774ba90e73eb97510a278bf6861aa728152972e36de607c6ebee2d4edd80c895c2d952bc9ff3f9e6628135605"
+STRAPI_TOKEN = "b774b192494bdbe6f936a5e269551dc9d62257abbe69c0f11e477032534d68a1e5a03e9dc9ede293a9cf98bf759eb69678ca0c30387dfba4e45db00dc49083c4907d5e8a10192c81e2baccb4dd74d80f18683d6eba0339913ea31b1c65cb4f98924245cbfff4cb0544d9540d68040529484eb8fc4216684127229188fbdd57fb"
 WP_API_BASE = "https://jornalistainclusivo.com/wp-json/wp/v2"
 
 headers = {"Authorization": f"Bearer {STRAPI_TOKEN}"}
 headers_aws = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
-# --- MAPEAMENTOS ---
-AUTHOR_MAP = {"5": "Carol Nunes", "23": "Daniela Rorato", "26": "Gabriel Henrique", "28": "Igor Lima", "27": "Karina Almeida", "29": "Mileide Moreira", "11": "Murilo Pereira", "1": "Rafael Ferraz"}
-CATEGORY_MAP = {"9": "noticias", "178": "mercado-de-trabalho", "11": "entrevistas", "2131": "neurodiversidade", "2132": "educacao", "52": "paradesporto", "50": "saude", "51": "direitos-pcd", "1754": "direitos-pcd", "3": "direitos-pcd", "49": "artigos", "75": "artigos", "7": "artigos"}
+# --- FAXINA DE RASCUNHOS ---
 
-cache = {"autores": {}, "categorias": {}}
-
-def get_or_create_category(wp_cat_id):
-    slug = CATEGORY_MAP.get(str(wp_cat_id))
-    if not slug: return None
-    if slug in cache["categorias"]: return cache["categorias"][slug]
-    
-    # Busca
-    res = requests.get(f"{STRAPI_URL}/api/categorias?filters[slug][$eq]={slug}", headers=headers).json()
+def cleanup_drafts():
+    print("--- Faxina: Excluindo rascunhos anteriores ---")
+    res = requests.get(f"{STRAPI_URL}/api/artigos?status=draft", headers=headers).json()
     if res.get('data'):
-        sid = res['data'][0]['id']
-    else:
-        # Cria se não existir (O pulo do gato)
-        print(f"  [+] Criando Categoria: {slug}")
-        new = requests.post(f"{STRAPI_URL}/api/categorias", headers=headers, json={"data": {"nome": slug.capitalize(), "slug": slug}}).json()
-        sid = new['data']['id']
-    
-    cache["categorias"][slug] = sid
-    return sid
+        for doc in res['data']:
+            doc_id = doc['documentId']
+            requests.delete(f"{STRAPI_URL}/api/artigos/{doc_id}", headers=headers)
+            print(f"  [-] Deletado: {doc_id}")
 
-def get_or_create_author(wp_author_id):
-    nome = AUTHOR_MAP.get(str(wp_author_id))
-    if not nome: return None
-    if nome in cache["autores"]: return cache["autores"][nome]
+# --- PROCESSAMENTO DE CONTEÚDO (LINKS E FORMATAÇÃO) ---
+
+def html_to_strapi_blocks(html):
+    """Converte HTML para o formato de blocos JSON do Strapi 5 mantendo links e negrito."""
+    soup = BeautifulSoup(html, 'html.parser')
+    blocks = []
     
-    # Busca
-    res = requests.get(f"{STRAPI_URL}/api/autores?filters[nome][$eq]={nome}", headers=headers).json()
-    if res.get('data'):
-        sid = res['data'][0]['id']
-    else:
-        # Cria se não existir
-        print(f"  [+] Criando Autor: {nome}")
-        new = requests.post(f"{STRAPI_URL}/api/autores", headers=headers, json={"data": {"nome": nome}}).json()
-        sid = new['data']['id']
-    
-    cache["autores"][nome] = sid
-    return sid
+    # Iteramos por parágrafos e cabeçalhos para manter a estrutura
+    for tag in soup.find_all(['p', 'h2', 'h3']):
+        if any(x in tag.text for x in ["#Audiodescrição", "#DescriçãoDaImagem"]):
+            continue
+            
+        # Define o tipo de bloco
+        block_type = "paragraph"
+        if tag.name == 'h2': block_type = "heading"
+        
+        block = {"type": block_type, "children": []}
+        if block_type == "heading": block["level"] = 2
+
+        for child in tag.children:
+            if child.name == 'a': # Trata Links
+                block["children"].append({
+                    "type": "link",
+                    "url": child.get('href'),
+                    "children": [{"type": "text", "text": child.get_text()}]
+                })
+            elif child.name in ['strong', 'b']: # Trata Negrito
+                block["children"].append({"type": "text", "text": child.get_text(), "bold": True})
+            elif child.name == 'em': # Trata Itálico
+                block["children"].append({"type": "text", "text": child.get_text(), "italic": True})
+            else:
+                text = str(child)
+                if text.strip() and not text.startswith('<'):
+                    block["children"].append({"type": "text", "text": text})
+        
+        if block["children"]:
+            blocks.append(block)
+            
+    return blocks
+
+# --- UPLOAD DE MÍDIA ---
 
 def upload_capa(wp_media_id):
     if not wp_media_id: return None
@@ -65,52 +77,60 @@ def upload_capa(wp_media_id):
     except: pass
     return None
 
-def process_content(html):
-    soup = BeautifulSoup(html, 'html.parser')
-    h2 = soup.find('h2')
-    subtitulo = h2.get_text().strip() if h2 else ""
-    if h2: h2.decompose()
-    
-    # Acessibilidade
-    acc_text = ""
-    for p in soup.find_all('p'):
-        if any(x in p.text for x in ["#Audiodescrição", "#DescriçãoDaImagem", "Legenda Descrita"]):
-            acc_text = re.sub(r"#.*?:", "", p.text).strip()
-            break
-            
-    # Formato Blocks (Strapi 5)
-    body_blocks = [{"type": "paragraph", "children": [{"type": "text", "text": soup.get_text(separator='\n')}]}]
-    return subtitulo, acc_text, body_blocks
+# --- MIGRAÇÃO ---
 
 def migrate(limit=10):
-    print(f"--- Iniciando Migração JINC ({limit} posts) ---")
+    cleanup_drafts()
+    print(f"\n--- Iniciando Migração V2.2 ({limit} posts) ---")
     posts = requests.get(f"{WP_API_BASE}/posts?per_page={limit}").json()
-    
+
     for i, wp in enumerate(posts):
-        # Limpeza do Resumo (get_text remove os <p>)
-        resumo_limpo = BeautifulSoup(wp['excerpt']['rendered'], 'html.parser').get_text().strip()
-        sub, acc, body = process_content(wp['content']['rendered'])
+        # Captura audiodescrição para acessibilidade
+        soup = BeautifulSoup(wp['content']['rendered'], 'html.parser')
+        acc = ""
+        for p in soup.find_all('p'):
+            if "#Audiodescrição" in p.text:
+                acc = p.text.replace("#Audiodescrição:", "").strip()
+                break
+        
+        formatted_blocks = html_to_strapi_blocks(wp['content']['rendered'])
+        
+        # Rank Math / Yoast Fallback
+        wp_seo = wp.get('yoast_head_json', {})
         
         payload = {
             "data": {
                 "titulo": wp['title']['rendered'],
                 "slug": wp['slug'],
-                "subtitulo": sub,
-                "resumo_simples": resumo_limpo,
+                "subtitulo": "", # Será preenchido pela IA
+                "resumo_simples": BeautifulSoup(wp['excerpt']['rendered'], 'html.parser').get_text().strip(),
                 "descricao_audio": acc,
                 "alt_text_ia": acc,
                 "data_publicacao": wp['date'].split('T')[0],
                 "capa": upload_capa(wp.get('featured_media')),
-                "autors": [get_or_create_author(wp['author'])],
-                "categoria": get_or_create_category(wp['categories'][0]) if wp['categories'] else None,
                 "locale": "pt-BR",
-                "legacy_id": str(wp['id']),
-                "blocos_de_conteudo": [{"__component": "blocos-materia.texto-livre", "texto": body}],
+                "blocos_de_conteudo": [
+                    {
+                        "__component": "blocos-materia.texto-livre", 
+                        "texto": formatted_blocks
+                    }
+                ],
+                # Ajustado para 'seo' em caixa baixa e inicializando structuredData
+                "seo": {
+                    "metaTitle": wp_seo.get('title', wp['title']['rendered'][:60]),
+                    "metaDescription": wp_seo.get('description', ""),
+                    "keywords": "",
+                    "structuredData": {} # Inicia como objeto vazio em vez de null
+                },
                 "publishedAt": None
             }
         }
+        
         res = requests.post(f"{STRAPI_URL}/api/artigos", headers=headers, json=payload)
-        print(f"[{i+1}/{len(posts)}] {wp['slug']} -> {res.status_code}")
+        if res.status_code in [200, 201]:
+            print(f"[{i+1}/{len(posts)}] Sucesso: {wp['slug']}")
+        else:
+            print(f"[{i+1}/{len(posts)}] Erro: {res.text}")
 
 if __name__ == "__main__":
     migrate(limit=10)
