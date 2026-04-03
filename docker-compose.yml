@@ -37,16 +37,22 @@ services:
     build:
       context: ./jinc-frontend
       dockerfile: Dockerfile
+      target: builder # Builder contém o código fonte e as dependências completas
     container_name: jinc_frontend
     restart: unless-stopped
     env_file: ./jinc-frontend/.env.local
     environment:
-      # O Frontend consome o CMS via rede interna do Docker
-      NODE_ENV: production
+      # O Frontend agora roda em modo dev para habilitar HMR (Vibe-Coding)
+      NODE_ENV: development
       INTERNAL_STRAPI_URL: http://cms:1337
       NEXT_PUBLIC_STRAPI_API_URL: http://localhost:1337
+      WATCHPACK_POLLING: "true" # Melhora detecção de arquivos no Windows/WSL2
     ports:
       - "3000:3000"
+    command: sh -c "npm install && npx next dev"
+    volumes:
+      - ./jinc-frontend:/app
+      - /app/node_modules # Protege node_modules interno do Linux
     depends_on:
       cms:
         condition: service_healthy # Espera o check de saúde do CMS
