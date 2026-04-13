@@ -1,11 +1,11 @@
 services:
   cms:
     build:
-      context: ./cms
+      context: ./jinc-cms
       dockerfile: Dockerfile
     container_name: jinc_cms
     restart: unless-stopped
-    env_file: ./cms/.env
+    env_file: ./jinc-cms/.env
     environment:
       # Forçamos development para liberar o Content-Type Builder
       NODE_ENV: development
@@ -18,7 +18,7 @@ services:
       - "5173:5173"
     volumes:
       # BIND MOUNT: Sincroniza o código (src, api, etc) com seu VS Code no Windows
-      - ./cms:/opt/app
+      - ./jinc-cms:/opt/app
       # ANONYMOUS VOLUME: Protege os pacotes do Linux para não misturar com o Windows
       - /opt/app/node_modules
       # PERSISTÊNCIA: Mantém suas imagens e banco de dados salvos

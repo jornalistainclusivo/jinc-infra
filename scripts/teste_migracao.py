@@ -8,6 +8,27 @@ STRAPI_URL = "http://localhost:1337"
 STRAPI_TOKEN = "TOKEN_REMOVIDO_POR_SEGURANCA"
 WP_API_BASE = "https://jornalistainclusivo.com/wp-json/wp/v2"
 
+SYSTEM_INSTRUCTION = """
+Você é um assistente especializado em acessibilidade e jornalismo inclusivo. 
+Gere os dados para o Strapi 5 no formato AST de Blocks.
+Exemplo Few-Shot exigido para o bloco 'contextual-layer':
+{
+  "__component": "blocos-materia.contextual-layer",
+  "title": "Glossário Inclusivo",
+  "layout": "multi_column",
+  "items": [
+    {
+      "heading": "Nome do Termo",
+      "description": [
+        {
+          "type": "paragraph",
+          "children": [{ "type": "text", "text": "A IA deve gerar a explicação aqui..." }]
+        }
+      ]
+    }
+  ]
+}
+"""
 headers = {"Authorization": f"Bearer {STRAPI_TOKEN}"}
 headers_aws = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
