@@ -1,0 +1,20 @@
+{
+  "strapi": {
+    "default_locale": "pt-BR",
+    "draft_status": "draft",
+    "content_type": "artigos",
+    "batch_size": 10
+  },
+  "wordpress": {
+    "api_base": "https://jornalistainclusivo.com/wp-json/wp/v2",
+    "posts_per_page": 10
+  },
+  "migration": {
+    "skip_audiodescription_markers": [
+      "#Audiodescrição",
+      "#DescriçãoDaImagem"
+    ],
+    "supported_html_tags": ["p", "h2", "h3"],
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  }
+}
