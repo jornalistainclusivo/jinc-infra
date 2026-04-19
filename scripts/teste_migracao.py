@@ -1,11 +1,21 @@
+import os
 import requests
 import re
 from bs4 import BeautifulSoup
 import unicodedata
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- CONFIGURAÇÕES ---
-STRAPI_URL = "http://localhost:1337"
-STRAPI_TOKEN = "TOKEN_REMOVIDO_POR_SEGURANCA"
+STRAPI_URL = os.getenv("STRAPI_URL", "http://localhost:1337")
+STRAPI_TOKEN = os.getenv("STRAPI_TOKEN")
+
+if not STRAPI_TOKEN:
+    raise RuntimeError(
+        "❌ STRAPI_TOKEN não encontrado! "
+        "Defina a variável no arquivo .env ou como variável de ambiente."
+    )
 WP_API_BASE = "https://jornalistainclusivo.com/wp-json/wp/v2"
 
 SYSTEM_INSTRUCTION = """
