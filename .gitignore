@@ -6,7 +6,6 @@
 !/docker-compose.yml
 !/README.md
 !/.env.example
-!/AGENTS.md
 !/scripts/
 !/.vscode/
 
@@ -27,7 +26,4 @@
 # 5. Dados Persistentes do Docker (Não versionar bancos locais)
 **/cms/.tmp/
 **/cms/public/uploads/
-
-# Segredos e Documentação de IA (Local Only)
-AGENTS.md
 
