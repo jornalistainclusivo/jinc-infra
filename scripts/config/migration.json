@@ -14,7 +14,11 @@
       "#Audiodescrição",
       "#DescriçãoDaImagem"
     ],
-    "supported_html_tags": ["p", "h2", "h3"],
+    "supported_html_tags": [
+      "p",
+      "h2",
+      "h3"
+    ],
     "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
   }
 }
